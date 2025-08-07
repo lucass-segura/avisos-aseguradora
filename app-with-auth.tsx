@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import LoginForm from "./components/login-form"
 import Navigation from "./components/navigation"
 import InsuranceDashboard from "./dashboard"
@@ -8,27 +8,49 @@ import ClientManagementWithModal from "./client-management-with-modal"
 import AddClientForm from "./components/add-client-form"
 import CompaniesManagement from "./components/companies-management"
 import DatabaseSetup from "./components/database-setup"
+import { supabase } from "@/lib/supabase"
+
+interface User {
+  id: string;
+  email?: string;
+  user_metadata: {
+    full_name?: string;
+  }
+}
 
 export default function AppWithAuth() {
+  const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentPage, setCurrentPage] = useState<"avisos" | "clientes" | "companias" | "add-client">("avisos")
   const [isDatabaseError, setIsDatabaseError] = useState(false)
-  const clientManagementRef = useRef<any>(null)
 
-  const handleLoginSuccess = () => {
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user as User);
+        setIsAuthenticated(true);
+      }
+    };
+    checkSession();
+  }, []);
+
+  const handleLoginSuccess = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user as User)
     setIsAuthenticated(true)
     setCurrentPage("avisos")
   }
 
-  const handleLogout = () => {
+   const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
     setIsAuthenticated(false)
     setCurrentPage("avisos")
   }
 
   const handleSaveClient = (clientData: any) => {
     console.log("Cliente guardado:", clientData)
-    // Ya no necesitamos agregar manualmente, Supabase se encarga de la persistencia
-    // y el componente se actualizará automáticamente
     setCurrentPage("clientes")
   }
 
@@ -38,7 +60,6 @@ export default function AppWithAuth() {
 
   const handleDatabaseRetry = () => {
     setIsDatabaseError(false)
-    // La aplicación se recargará automáticamente
     window.location.reload()
   }
 
@@ -54,9 +75,10 @@ export default function AppWithAuth() {
 
   // Si está autenticado, mostrar la aplicación principal
   const renderCurrentPage = () => {
+    const userName = user?.user_metadata?.full_name || user?.email || "Usuario desconocido";
     switch (currentPage) {
       case "avisos":
-        return <InsuranceDashboard />
+        return <InsuranceDashboard userName={userName} />
       case "clientes":
         return <ClientManagementWithModal onAddClient={() => setCurrentPage("add-client")} />
       case "add-client":
@@ -70,7 +92,7 @@ export default function AppWithAuth() {
       case "companias":
         return <CompaniesManagement />
       default:
-        return <InsuranceDashboard />
+        return <InsuranceDashboard userName={userName} />
     }
   }
 

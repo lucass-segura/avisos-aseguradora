@@ -49,31 +49,49 @@ export async function getAvisos() {
   }
 }
 
-export async function updateAvisoEstado(avisoId: number, nuevoEstado: "por_vencer" | "avisado" | "pagado") {
+export async function updateAvisoEstado(
+  avisoId: number,
+  nuevoEstado: "por_vencer" | "avisado" | "pagado",
+  userName: string // 1. Añadimos el nombre de usuario como parámetro
+) {
   try {
-    if (nuevoEstado === "pagado") {
-      // Usar la función especial para marcar pago
-      const { error } = await supabase.rpc("marcar_pago_poliza", { aviso_id: avisoId })
+    let updateData: any = { estado: nuevoEstado };
 
+    // 2. Si el nuevo estado es "avisado", guardamos el nombre del usuario y la fecha
+    if (nuevoEstado === "avisado") {
+      updateData.avisado_por = userName;
+      updateData.fecha_aviso = new Date().toISOString();
+    }
+
+    // 3. Si se devuelve a "por vencer", limpiamos el campo
+    if (nuevoEstado === "por_vencer") {
+      updateData.avisado_por = null;
+      updateData.fecha_aviso = null;
+    }
+
+    if (nuevoEstado === "pagado") {
+      const { error } = await supabase.rpc("marcar_pago_poliza", { aviso_id: avisoId });
       if (error) {
-        console.error("Error marking payment:", error)
-        return { success: false, error: error.message, data: null }
+        console.error("Error marking payment:", error);
+        return { success: false, error: error.message };
       }
     } else {
-      // Actualización normal para otros estados
-      const { error } = await supabase.from("avisos").update({ estado: nuevoEstado }).eq("id", avisoId)
+      const { error } = await supabase
+        .from("avisos")
+        .update(updateData)
+        .eq("id", avisoId);
 
       if (error) {
-        console.error("Error updating aviso:", error)
-        return { success: false, error: error.message, data: null }
+        console.error("Error updating aviso:", error);
+        return { success: false, error: error.message };
       }
     }
 
-    revalidatePath("/avisos")
-    return { success: true, data: null }
+    revalidatePath("/");
+    return { success: true };
   } catch (error) {
-    console.error("Error in updateAvisoEstado:", error)
-    return { success: false, error: "Error interno del servidor", data: null }
+    console.error("Error in updateAvisoEstado:", error);
+    return { success: false, error: "Error interno del servidor" };
   }
 }
 
