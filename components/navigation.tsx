@@ -1,19 +1,25 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, User } from "lucide-react"
+import { Menu, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { signOut } from "@/lib/actions/auth"
 
 interface NavigationProps {
   currentPage?: "avisos" | "clientes" | "companias"
   onNavigate?: (page: "avisos" | "clientes" | "companias") => void
-  onLogout?: () => void
+  user?: {
+    id: string
+    email?: string
+  }
 }
 
-export default function Navigation({ currentPage = "avisos", onNavigate, onLogout }: NavigationProps) {
+export default function Navigation({ currentPage = "avisos", onNavigate, user }: NavigationProps) {
+  console.log("🧭 Renderizando navegación para usuario:", user?.email)
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const navigationLinks = [
@@ -23,8 +29,18 @@ export default function Navigation({ currentPage = "avisos", onNavigate, onLogou
   ] as const
 
   const handleNavigation = (page: "avisos" | "clientes" | "companias") => {
+    console.log("🔄 Navegando a:", page)
     onNavigate?.(page)
-    setIsMobileMenuOpen(false) // Cerrar menú móvil al navegar
+    setIsMobileMenuOpen(false)
+  }
+
+  const handleLogout = async () => {
+    console.log("🚪 Iniciando logout desde navegación...")
+    try {
+      await signOut()
+    } catch (error) {
+      console.error("💥 Error en logout:", error)
+    }
   }
 
   const getLinkClasses = (linkId: string) => {
@@ -33,6 +49,13 @@ export default function Navigation({ currentPage = "avisos", onNavigate, onLogou
     const inactiveClasses = "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
 
     return `${baseClasses} ${currentPage === linkId ? activeClasses : inactiveClasses}`
+  }
+
+  const getUserInitials = () => {
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase()
+    }
+    return "U"
   }
 
   return (
@@ -62,18 +85,18 @@ export default function Navigation({ currentPage = "avisos", onNavigate, onLogou
                   <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/placeholder-avatar.jpg" alt="Usuario" />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-blue-100 text-blue-600">{getUserInitials()}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5 text-sm text-gray-500 border-b">{user?.email || "Usuario"}</div>
                   <DropdownMenuItem disabled className="text-gray-400 cursor-not-allowed">
                     Editar Perfil
                     <span className="ml-auto text-xs">(Próximamente)</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onLogout} className="text-red-600 cursor: focus:text-red-700">
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer focus:text-red-700">
+                    <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -110,12 +133,10 @@ export default function Navigation({ currentPage = "avisos", onNavigate, onLogou
                     <div className="flex items-center space-x-3 mb-4">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src="/placeholder-avatar.jpg" alt="Usuario" />
-                        <AvatarFallback className="bg-blue-100 text-blue-600">
-                          <User className="h-5 w-5" />
-                        </AvatarFallback>
+                        <AvatarFallback className="bg-blue-100 text-blue-600">{getUserInitials()}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Usuario</p>
+                        <p className="text-sm font-medium text-gray-900">{user?.email || "Usuario"}</p>
                         <p className="text-xs text-gray-500">Asesor de Seguros</p>
                       </div>
                     </div>
@@ -130,9 +151,10 @@ export default function Navigation({ currentPage = "avisos", onNavigate, onLogou
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={onLogout}
+                        onClick={handleLogout}
                         className="w-full justify-start text-left text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
+                        <LogOut className="mr-2 h-4 w-4" />
                         Cerrar Sesión
                       </Button>
                     </div>

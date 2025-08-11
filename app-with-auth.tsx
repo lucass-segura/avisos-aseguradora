@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef } from "react"
-import LoginForm from "./components/login-form"
 import Navigation from "./components/navigation"
 import InsuranceDashboard from "./dashboard"
 import ClientManagementWithModal from "./client-management-with-modal"
@@ -9,50 +8,40 @@ import AddClientForm from "./components/add-client-form"
 import CompaniesManagement from "./components/companies-management"
 import DatabaseSetup from "./components/database-setup"
 
-export default function AppWithAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+interface AppWithAuthProps {
+  user: {
+    id: string
+    email?: string
+  }
+}
+
+export default function AppWithAuth({ user }: AppWithAuthProps) {
+  console.log("🏠 Cargando aplicación principal para usuario:", user.email)
+
   const [currentPage, setCurrentPage] = useState<"avisos" | "clientes" | "companias" | "add-client">("avisos")
   const [isDatabaseError, setIsDatabaseError] = useState(false)
   const clientManagementRef = useRef<any>(null)
 
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true)
-    setCurrentPage("avisos")
-  }
-
-  const handleLogout = () => {
-    setIsAuthenticated(false)
-    setCurrentPage("avisos")
-  }
-
   const handleSaveClient = (clientData: any) => {
-    console.log("Cliente guardado:", clientData)
-    // Ya no necesitamos agregar manualmente, Supabase se encarga de la persistencia
-    // y el componente se actualizará automáticamente
+    console.log("✅ Cliente guardado:", clientData)
     setCurrentPage("clientes")
   }
 
   const handleCancelAddClient = () => {
+    console.log("❌ Cancelada creación de cliente")
     setCurrentPage("clientes")
   }
 
   const handleDatabaseRetry = () => {
+    console.log("🔄 Reintentando conexión a base de datos...")
     setIsDatabaseError(false)
-    // La aplicación se recargará automáticamente
     window.location.reload()
   }
 
-  // Si hay error de base de datos, mostrar configuración
   if (isDatabaseError) {
     return <DatabaseSetup onRetry={handleDatabaseRetry} />
   }
 
-  // Si no está autenticado, mostrar login
-  if (!isAuthenticated) {
-    return <LoginForm onLoginSuccess={handleLoginSuccess} />
-  }
-
-  // Si está autenticado, mostrar la aplicación principal
   const renderCurrentPage = () => {
     switch (currentPage) {
       case "avisos":
@@ -79,7 +68,7 @@ export default function AppWithAuth() {
       <Navigation
         currentPage={currentPage === "add-client" ? "clientes" : currentPage}
         onNavigate={setCurrentPage}
-        onLogout={handleLogout}
+        user={user}
       />
       <main className="pt-0">{renderCurrentPage()}</main>
     </div>
